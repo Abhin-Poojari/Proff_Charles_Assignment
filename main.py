@@ -20,7 +20,7 @@ data = get_data()
 
 st.title('Sales Dashboard')
 st.write(f"We have {len(data)} datapoints")
-choice = st.selectbox("Select a Company", data["company"].unique(), index=0)
+choice = st.selectbox("Select a Compan", data["company"].unique(), index=0)
 
 new_data = data[data["company"] == choice]
 ppl = st.selectbox("Select a Category", new_data["cat"].unique(), index=0)
