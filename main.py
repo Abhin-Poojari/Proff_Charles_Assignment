@@ -20,7 +20,7 @@ def get_data(table_name):
 
 
 # data['company'] = data['company'].astype('string')
-# data['cat'] = data['cat'].astype('string')
+# data['cat'] = data['cat'].astype ('string')
 
 st.set_page_config('Sales Dashboard', ":bar_chart:", layout="wide")
 
