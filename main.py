@@ -20,7 +20,7 @@ def get_data(table_name):
 
 
 # data['company'] = data['company'].astype('string')
-# data['cat'] = data['cat'].astype('string')
+# data['cat'] = data['cat'].astype ('string')
 
 st.set_page_config('Sales Dashboard', ":bar_chart:", layout="wide")
 
@@ -39,12 +39,19 @@ company = st.sidebar.selectbox("Select a Company:",
 
 # Category selection
 category_options = data[data["company"] == company]["cat"].unique()
-category = st.sidebar.multiselect("Select any Category",
+
+select_all = st.sidebar.checkbox('Select all category')
+
+if(select_all):
+  category = category_options
+else:
+  category = st.sidebar.multiselect("Select any Category",
                                   category_options,
-                                  default=category_options[0])
+                                  default=category_options[0],
+                                  disabled=select_all)
 
 # Data filtering
-data_selection = data.query("company == @company & cat == @category")
+data_selection = data.query("company == @company & cat in @category")
 
 #--------------MAIN PAGE -------------------
 st.title(f":bar_chart: Sales Dashboard - {company}")
@@ -70,40 +77,58 @@ with third_column:
   st.subheader(f"**:blue[{total_volume}]**")
 
 # -----------------------------------------------------------------------
-#Chart for Products Sold
-no_prod_sold = data_selection[['cat', 'price']].value_counts().reset_index()
+st.subheader("Category Analysis:")
+first_column, second_column = st.columns(2)
 
-no_prod_sold.columns = [*no_prod_sold.columns[:-1], 'Volume of Product']
+with first_column:
+  #Chart for Products Sold
+  no_prod_sold = data_selection[['cat', 'price']].value_counts().reset_index()
+  
+  no_prod_sold.columns = [*no_prod_sold.columns[:-1], 'Volume of Product']
+  
+  plot_bar = px.bar(no_prod_sold,
+                    x='price',
+                    y='Volume of Product',
+                    color='cat',
+                    width=450,
+                    labels={"cat": "Category", "price":"Price"},
+                    title=f'Different products sold in {company}')
+  
+  st.plotly_chart(plot_bar)
 
-plot_bar = px.bar(no_prod_sold,
-                  x='price',
-                  y='Volume of Product',
-                  color='cat',
-                  labels={"cat": "Category"},
-                  title=f'Different products sold in {company}')
-
-st.plotly_chart(plot_bar)
+with second_column:
+  market_share = data.groupby(["company","cat"])["price"].sum().reset_index()
+  market_share = market_share.loc[market_share["cat"].isin(category)]
+  market_share['Percentage'] = 100 * market_share['price'] / market_share.groupby('cat')['price'].transform('sum')
+  
+  plot_bar = px.bar(market_share,
+                      x='cat',
+                      y='Percentage',
+                      color='company',
+                      width=450,
+                      labels={"Percentage": "Market Share (%)", "cat": "Category"},
+                      title='Market Share based on Category')
+    
+  st.plotly_chart(plot_bar)
 
 # --------------------------------------------------------------------------
 # Volume of sales per week
-volume_per_week = data_selection.groupby(["week"
-                                          ])["price"].count().reset_index()
+volume_per_week = data_selection.groupby(["week"])["price"].count().reset_index()
 
 # The revenues per week
-revenue_per_week = data_selection.groupby(["week"
-                                           ])["price"].sum().reset_index()
+revenue_per_week = data_selection.groupby(["week"])["price"].sum().reset_index()
 
-# data = data.loc[data["cat"].isin(category)]
+data = data.loc[data["cat"].isin(category)]
 
 # The volumes of other company per week
-market_volume_per_week = data.groupby(["company",
-                                       "week"])["price"].count().reset_index()
+market_volume_per_week = data.groupby(["company","week"])["price"].count().reset_index()
+# st.table(market_volume_per_week)
 # The revenues of other company per week
-market_revenue_per_week = data.groupby(["company",
-                                        "week"])["price"].sum().reset_index()
+market_revenue_per_week = data.groupby(["company","week"])["price"].sum().reset_index()
 
 # --------------------------------------------------------------------------
 # Displaying Chart
+st.subheader("Volume and Revenue Analysis:")
 first_column, second_column = st.columns(2)
 
 with first_column:
@@ -116,15 +141,16 @@ with first_column:
                            y="price",
                            width=450,
                            labels={"price": "Volume of Products"},
-                           title=f'Volume by week for {company}')
+                           title='Volume produced per week')
     st.plotly_chart(chart_volume)
 
   with tab2:
     chart_revenue = px.line(revenue_per_week,
                             x="week",
                             y="price",
-                            width=450,
-                            title=f'Revenue by Week for {company}')
+                            width=450,                            
+                            labels={"price":"Price"},
+                            title='Revenue generated per Week')
     st.plotly_chart(chart_revenue)
 
 with second_column:
@@ -149,5 +175,6 @@ with second_column:
                             line_group="company",
                             color="company",
                             width=550,
+                            labels={"price":"Price"},
                             title='Market Analysis - Revenue / Time')
     st.plotly_chart(chart_revenue)
